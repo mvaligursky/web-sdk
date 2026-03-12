@@ -3,10 +3,10 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Vega React Testbed</title>
+    <title>Gracia React</title>
     <script type="importmap">
     { "imports": {
-        "gracia-web-sdk": "./dist/VegaDemo.js?v=__BUILD_HASH__"
+        "@gracia/web-sdk": "./dist/GraciaAIO.js?v=__BUILD_HASH__"
     } }
     </script>
     <style>
@@ -72,7 +72,7 @@
 <body>
     <div id="root"></div>
     <script type="module">
-    import { buildApiSources, htm, React, ReactDOM, useVegaPlayer, useVegaPlaylist } from 'gracia-web-sdk';
+    import { buildApiSources, htm, React, ReactDOM, useGraciaPlayer, useGraciaPlaylist } from '@gracia/web-sdk';
 
     const { useState, useEffect, useRef, useCallback } = React;
     const html = htm.bind(React.createElement);
@@ -135,11 +135,11 @@
 
     function TestApp() {
         const containerRef = useRef(null);
-        const vega = useVegaPlayer({ containerRef, moduleUrl: '/dist/Vega.js' });
-        const playlist = useVegaPlaylist(vega);
+        const gracia = useGraciaPlayer({ containerRef, moduleUrl: '/dist/GraciaWebCore.js' });
+        const playlist = useGraciaPlaylist(gracia);
 
         useEffect(() => {
-            if (!vega.isInitialized) return;
+            if (!gracia.isInitialized) return;
             (async () => {
                 try {
                     const results = await Promise.allSettled([
@@ -178,10 +178,10 @@
                     if (sources.length) playlist.setSources(sources);
                 } catch (err) { console.warn('Failed to load sources:', err); }
             })();
-        }, [vega.isInitialized]);
+        }, [gracia.isInitialized]);
 
-        const { playback, xr } = vega;
-        const isXR = vega.mode === 'vr' || vega.mode === 'ar';
+        const { playback, xr } = gracia;
+        const isXR = gracia.mode === 'vr' || gracia.mode === 'ar';
         const playIcon = playback.isBuffering || playback.isSeeking
             ? html`<span class="spinner">\u27F3</span>`
             : playback.isPlaying ? '\u23F8' : '\u25B6';
@@ -193,14 +193,14 @@
                 <div class="ov abs">
                     <div class="top">
                         <div class="row">
-                            <button class="btn ${vega.mode === 'pw' ? 'active' : ''}" onClick=${() => xr.setMode('pw')}>2D</button>
-                            <button class="btn ${vega.mode === 'vr' ? 'active' : ''}" disabled=${!xr.vrSupported}
-                                onClick=${() => xr.vrSupported && (vega.mode === 'vr' ? xr.setMode('pw') : xr.setMode('vr'))}>
-                                ${vega.mode === 'vr' ? 'Exit VR' : 'VR'}</button>
+                            <button class="btn ${gracia.mode === 'pw' ? 'active' : ''}" onClick=${() => xr.setMode('pw')}>2D</button>
+                            <button class="btn ${gracia.mode === 'vr' ? 'active' : ''}" disabled=${!xr.vrSupported}
+                                onClick=${() => xr.vrSupported && (gracia.mode === 'vr' ? xr.setMode('pw') : xr.setMode('vr'))}>
+                                ${gracia.mode === 'vr' ? 'Exit VR' : 'VR'}</button>
                             ${xr.arSupported && html`
-                                <button class="btn ${vega.mode === 'ar' ? 'active' : ''}"
-                                    onClick=${() => vega.mode === 'ar' ? xr.setMode('pw') : xr.setMode('ar')}>
-                                    ${vega.mode === 'ar' ? 'Exit AR' : 'AR'}</button>`}
+                                <button class="btn ${gracia.mode === 'ar' ? 'active' : ''}"
+                                    onClick=${() => gracia.mode === 'ar' ? xr.setMode('pw') : xr.setMode('ar')}>
+                                    ${gracia.mode === 'ar' ? 'Exit AR' : 'AR'}</button>`}
                         </div>
                         <div class="sep" />
                         <${SourceDropdown} sources=${playlist.sources} currentIndex=${playlist.index} onSelect=${i => playlist.goTo(i)} />
@@ -222,7 +222,7 @@
                                 <span class="vb-time">${fmt(playback.currentTime)} / ${fmt(playback.duration)}</span>
                                 <button class="vb-btn" onClick=${() => playback.toggleMute()}>${muteIcon}</button>
                             </div>`}
-                        ${vega.error && html`<div class="status-bar"><span class="tag err">${vega.error.message}</span></div>`}
+                        ${gracia.error && html`<div class="status-bar"><span class="tag err">${gracia.error.message}</span></div>`}
                     </div>
                 </div>
             </div>`;

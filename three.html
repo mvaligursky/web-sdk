@@ -3,11 +3,11 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Vega Three.js Testbed</title>
+    <title>Gracia Three.js</title>
     <script type="importmap">
     { "imports": {
-        "gracia-web-sdk": "./dist/VegaDemo.js?v=__BUILD_HASH__",
-        "gracia-web-sdk/wasm": "./dist/Vega.js?v=__BUILD_HASH__"
+        "@gracia/web-sdk": "./dist/GraciaAIO.js?v=__BUILD_HASH__",
+        "@gracia/web-sdk/wasm": "./dist/GraciaWebCore.js?v=__BUILD_HASH__"
     } }
     </script>
     <style>
@@ -152,8 +152,8 @@
 
     <script type="module">
     import { buildApiSources, EnvLighting, HDRLoader, LightProbeGenerator, OrbitControls, Sky, 
-             SplatsMesh, Stats, THREE, TransformControls } from 'gracia-web-sdk';
-    import ModuleFactory from 'gracia-web-sdk/wasm';
+             SplatsMesh, Stats, THREE, TransformControls } from '@gracia/web-sdk';
+    import ModuleFactory from '@gracia/web-sdk/wasm';
 
     const $ = id => document.getElementById(id);
     const mk = (tag, cls, par) => { const e = document.createElement(tag); if (cls) e.className = cls; par?.appendChild(e); return e; };
@@ -236,7 +236,7 @@
         return hdriCache.get(url);
     }
 
-    /* ── Probe for Vega splats ── */
+    /* ── Probe for Gracia splats ── */
 
     const cubeRT = new THREE.WebGLCubeRenderTarget(256, { type: THREE.HalfFloatType });
     const cubeCamera = new THREE.CubeCamera(0.1, 100, cubeRT);
@@ -315,12 +315,12 @@
     gizmo.setSize(0.75);
     scene.add(gizmo.getHelper());
 
-    /* ── Vega splats ─────────────────────────────── */
+    /* ── Gracia splats ─────────────────────────────── */
 
     const SPLAT_DEFAULTS = { pos: [0, -0.7, 0.9], scl: 0.5 };
     let splats = null;
 
-    async function initVega() {
+    async function initGracia() {
         splats = await SplatsMesh.create(
             opts => ModuleFactory({ ...opts, print: console.log, printErr: console.error }),
             renderer
@@ -615,7 +615,7 @@
             await loadSources(); initDropdown();
             tickBar = mountBar($('barWrap'));
             await Promise.all(HDRI_PRESETS.map(n => loadHDRI(SCENE_PRESETS[n].url)));
-            await initVega();
+            await initGracia();
             await applyScenePreset('golden');
             applyProbe();
             animate();

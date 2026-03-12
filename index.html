@@ -3,11 +3,11 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Vega Player</title>
+    <title>Gracia Player</title>
     <script type="importmap">
     { "imports": {
-        "gracia-web-sdk": "./dist/VegaDemo.js?v=__BUILD_HASH__",
-        "gracia-web-sdk/wasm": "./dist/Vega.js?v=__BUILD_HASH__"
+        "@gracia/web-sdk": "./dist/GraciaAIO.js?v=__BUILD_HASH__",
+        "@gracia/web-sdk/wasm": "./dist/GraciaWebCore.js?v=__BUILD_HASH__"
     } }
     </script>
     <style>
@@ -78,8 +78,8 @@
     </div>
 
     <script type="module">
-    import { buildApiSources, THREE, VegaApp, XROverlay } from 'gracia-web-sdk';
-    import ModuleFactory from 'gracia-web-sdk/wasm';
+    import { buildApiSources, GraciaApp, THREE, XROverlay } from '@gracia/web-sdk';
+    import ModuleFactory from '@gracia/web-sdk/wasm';
 
     const $ = id => document.getElementById(id);
     const mk = (tag, cls, par) => { const e = document.createElement(tag); if (cls) e.className = cls; par?.appendChild(e); return e; };
@@ -209,7 +209,7 @@
             try { overlay = new XROverlay(THREE); } catch {}
             await loadSources();
 
-            app = await VegaApp.create(
+            app = await GraciaApp.create(
                 opts => ModuleFactory({ ...opts, print: console.log, printErr: console.error }),
                 { container: $('canvasWrap'), overlay, mode: new URLSearchParams(location.search).get('mode') || 'pw' }
             );

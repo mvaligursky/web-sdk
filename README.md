@@ -17,11 +17,11 @@ Volumetric video player for the web. Lifelike 3D content in the browser — flat
 
 | File | Description |
 |------|-------------|
-| `Vega.js` | WASM engine — core playback runtime (zero JS dependencies) |
-| `VegaSDK.js` | Tree-shakeable ES module — player, Three.js, React hooks, XR |
-| `VegaDemo.js` | Self-contained demo bundle (includes Three.js, React, etc.) |
+| `GraciaWebCore.js` | WASM engine — core playback runtime (zero JS dependencies) |
+| `GraciaSDK.js` | Tree-shakeable ES module — player, Three.js, React hooks, XR |
+| `GraciaAIO.js` | Self-contained demo bundle (includes Three.js, React, etc.) |
 
-`VegaSDK.js` loads peer dependencies on demand — only what you use. `VegaDemo.js` bundles third-party libraries unmodified under their original licenses.
+`GraciaSDK.js` loads peer dependencies on demand — only what you use. `GraciaAIO.js` bundles third-party libraries unmodified under their original licenses.
 
 ## Installation
 
@@ -34,7 +34,7 @@ npm install github:gracia-labs/web-sdk react gl-matrix  # + React hooks & standa
 Or add directly to `package.json`:
 
 ```json
-"gracia-web-sdk": "github:gracia-labs/web-sdk"
+"@gracia/web-sdk": "github:gracia-labs/web-sdk"
 ```
 
 All peer dependencies are optional — install only what your integration needs:
@@ -42,8 +42,8 @@ All peer dependencies are optional — install only what your integration needs:
 | Peer dependency | Required for |
 |-----------------|-------------|
 | `three` | `SplatsMesh`, `XROverlay`, XR controls |
-| `react` | `useVegaPlayer`, `useVegaPlaylist` hooks |
-| `gl-matrix` | `VegaApp` standalone 2D+XR player |
+| `react` | `useGraciaPlayer`, `useGraciaPlaylist` hooks |
+| `gl-matrix` | `GraciaApp` standalone 2D+XR player |
 | `@react-three/fiber` | XR UI panels (R3F-based) |
 | `@react-three/uikit` | XR UI panels |
 | `@preact/signals-core` | XR UI reactive state |
@@ -51,7 +51,7 @@ All peer dependencies are optional — install only what your integration needs:
 
 ## Quick Start
 
-### Vanilla JS — VegaApp
+### Vanilla JS — GraciaApp
 
 Full-featured player with built-in camera, XR support and playback controls:
 
@@ -60,19 +60,19 @@ Full-featured player with built-in camera, XR support and playback controls:
 
 <script type="importmap">
 { "imports": {
-    "gracia-web-sdk/wasm": "./dist/Vega.js",
-    "gracia-web-sdk": "./dist/VegaDemo.js"
+    "@gracia/web-sdk/wasm": "./dist/GraciaWebCore.js",
+    "@gracia/web-sdk": "./dist/GraciaAIO.js"
 } }
 </script>
 
 <script type="module">
-import { buildApiSources, VegaApp, XROverlay, THREE } from 'gracia-web-sdk';
-import ModuleFactory from 'gracia-web-sdk/wasm';
+import { buildApiSources, GraciaApp, XROverlay, THREE } from '@gracia/web-sdk';
+import ModuleFactory from '@gracia/web-sdk/wasm';
 
 let overlay;
 try { overlay = new XROverlay(THREE); } catch {}
 
-const app = await VegaApp.create(
+const app = await GraciaApp.create(
     opts => ModuleFactory({ ...opts }),
     { container: document.getElementById('canvasWrap'), overlay, mode: 'pw' }
 );
@@ -92,24 +92,24 @@ app.supports('ar');        // check support
 
 ### React — Hooks
 
-Declarative integration with `useVegaPlayer` and `useVegaPlaylist`:
+Declarative integration with `useGraciaPlayer` and `useGraciaPlaylist`:
 
 ```jsx
 import { useRef, useEffect } from 'react';
-import { useVegaPlayer, useVegaPlaylist, buildApiSources } from 'gracia-web-sdk';
+import { useGraciaPlayer, useGraciaPlaylist, buildApiSources } from '@gracia/web-sdk';
 
 function Player() {
     const containerRef = useRef(null);
-    const vega = useVegaPlayer({ containerRef, moduleUrl: '/dist/Vega.js' });
-    const playlist = useVegaPlaylist(vega);
-    const { playback, xr } = vega;
+    const gracia = useGraciaPlayer({ containerRef, moduleUrl: '/dist/GraciaWebCore.js' });
+    const playlist = useGraciaPlaylist(gracia);
+    const { playback, xr } = gracia;
 
     useEffect(() => {
-        if (!vega.isInitialized) return;
+        if (!gracia.isInitialized) return;
         fetch('/api/sources').then(r => r.json()).then(async data => {
             playlist.setSources(await buildApiSources(data.items, data.baseUrl));
         });
-    }, [vega.isInitialized]);
+    }, [gracia.isInitialized]);
 
     return (
         <div style={{ position: 'relative', height: '100%' }}>
@@ -123,8 +123,8 @@ function Player() {
 
             {/* xr.setMode('pw' | 'vr' | 'ar'), xr.vrSupported, xr.arSupported */}
             <button disabled={!xr.vrSupported}
-                onClick={() => xr.setMode(vega.mode === 'vr' ? 'pw' : 'vr')}>
-                {vega.mode === 'vr' ? 'Exit VR' : 'VR'}
+                onClick={() => xr.setMode(gracia.mode === 'vr' ? 'pw' : 'vr')}>
+                {gracia.mode === 'vr' ? 'Exit VR' : 'VR'}
             </button>
 
             <button disabled={!playlist.hasPrev} onClick={() => playlist.prev()}>Prev</button>
@@ -140,8 +140,8 @@ function Player() {
 Volumetric playback as a standard Three.js mesh:
 
 ```js
-import { SplatsMesh, EnvLighting, THREE } from 'gracia-web-sdk';
-import ModuleFactory from 'gracia-web-sdk/wasm';
+import { SplatsMesh, EnvLighting, THREE } from '@gracia/web-sdk';
+import ModuleFactory from '@gracia/web-sdk/wasm';
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 const scene = new THREE.Scene();
@@ -166,7 +166,7 @@ splats.player.setEnvLighting(env, 1.0);
 
 ## Cross-Origin Isolation
 
-Vega spawns Web Workers that depend on `SharedArrayBuffer`, which requires a **cross-origin isolated** context. Your server must send these headers on every HTML/JS response:
+Gracia spawns Web Workers that depend on `SharedArrayBuffer`, which requires a **cross-origin isolated** context. Your server must send these headers on every HTML/JS response:
 
 | Header | Value |
 |--------|-------|
@@ -231,26 +231,26 @@ See [`nginx.conf`](nginx.conf) for a complete example.
 
 </details>
 
-### Serving `Vega.js`
+### Serving `GraciaWebCore.js`
 
-`Vega.js` is precompiled Emscripten glue — serve it as a **static file**, not processed by your bundler.
+`GraciaWebCore.js` is precompiled Emscripten glue — serve it as a **static file**, not processed by your bundler.
 
 **Vite** — [`vite-plugin-static-copy`](https://github.com/sapphi-red/vite-plugin-static-copy):
 
 ```ts
-viteStaticCopy({ targets: [{ src: 'node_modules/gracia-web-sdk/dist/Vega.js', dest: 'assets' }] })
+viteStaticCopy({ targets: [{ src: 'node_modules/@gracia/web-sdk/dist/GraciaWebCore.js', dest: 'assets' }] })
 ```
 
 **Webpack** — [`copy-webpack-plugin`](https://github.com/webpack-contrib/copy-webpack-plugin):
 
 ```js
-new CopyPlugin({ patterns: [{ from: 'node_modules/gracia-web-sdk/dist/Vega.js', to: 'assets/Vega.js' }] })
+new CopyPlugin({ patterns: [{ from: 'node_modules/@gracia/web-sdk/dist/GraciaWebCore.js', to: 'assets/GraciaWebCore.js' }] })
 ```
 
 Then reference it:
 
 ```js
-useVegaPlayer({ containerRef, moduleUrl: '/assets/Vega.js' });
+useGraciaPlayer({ containerRef, moduleUrl: '/assets/GraciaWebCore.js' });
 ```
 
 ### Verification
@@ -267,16 +267,16 @@ If `false`, check both headers are present (`DevTools → Network → Headers`) 
 
 | Export | Description |
 |--------|------------|
-| `VegaPlayer` | Core player — play, pause, seek, render |
-| `VegaApp` | High-level standalone player with camera, XR, mode switching |
+| `GraciaPlayer` | Core player — play, pause, seek, render |
+| `GraciaApp` | High-level standalone player with camera, XR, mode switching |
 | `SplatsMesh` | Three.js `Mesh` subclass for scene graph integration |
 
 ### React Hooks
 
 | Hook | Description |
 |------|------------|
-| `useVegaPlayer(options)` | Manages player lifecycle, returns reactive state |
-| `useVegaPlaylist(vega)` | Multi-source playlist with next/prev/goTo |
+| `useGraciaPlayer(options)` | Manages player lifecycle, returns reactive state |
+| `useGraciaPlaylist(gracia)` | Multi-source playlist with next/prev/goTo |
 
 ### XR
 
@@ -309,6 +309,109 @@ If `false`, check both headers are present (`DevTools → Network → Headers`) 
 - **HTTPS** — `SharedArrayBuffer` needs a [secure context](https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts) (`localhost` exempt)
 - **Cross-Origin Isolation** — COOP + COEP headers (see [above](#cross-origin-isolation))
 - **WebXR** — VR/AR modes only (Meta Quest Browser, etc.)
+
+## Content Access & Security
+
+The player needs a **streamingId** (identifies the scene) and a **view token** (authorizes playback). Both can be created in your Gracia account under **Settings → Api Settings**.
+
+Base URL: `https://market.gracia.ai`
+
+### Option 1: Long-lived View Token (not recommended)
+
+> **Not recommended.** Long-lived tokens are less secure — anyone with the token can watch the content. Use Option 2 whenever possible.
+
+Create a view token in **Settings → Api Settings**, set the `streamingIds` it can access, optionally restrict to specific `domains`, and pass it directly to the player. No backend needed.
+
+Only suitable for: embedded players, kiosks, demo pages where per-user access control is not needed. Always use domain whitelisting to limit exposure.
+
+### Option 2: Short-lived Tokens via Your Backend (recommended)
+
+Implement an endpoint on your backend that your frontend calls when a user wants to watch content. This endpoint verifies access, requests a short-lived view token from Gracia API, and returns the tokens to the frontend. The API token never leaves your server.
+
+Best for: pay-per-view, purchases, subscriptions.
+
+1. Create an **API token** in **Settings → Api Settings**. Store it securely on your server.
+2. Implement an endpoint (e.g. `GET /api/streaming-access/{contentId}`) that authenticates the user, checks access, calls Gracia API to issue a view token, and returns `streamingId` + `viewToken`.
+3. Your frontend calls this endpoint and passes the received tokens to the player.
+
+```
+┌──────────┐         ┌──────────────┐         ┌──────────────────┐
+│  Player  │         │ Your Backend │         │ Gracia Streaming │
+│ (client) │         │              │         │       API        │
+└────┬─────┘         └──────┬───────┘         └────────┬─────────┘
+     │                      │                          │
+     │  1. User wants to    │                          │
+     │     watch content    │                          │
+     │─────────────────────>│                          │
+     │                      │                          │
+     │               2. Your backend                   │
+     │                  validates access               │
+     │                      │                          │
+     │                      │  3. Issue view token     │
+     │                      │     POST /view-token/issue
+     │                      │     X-API-KEY: <api_token>
+     │                      │─────────────────────────>│
+     │                      │                          │
+     │                      │  4. View token (JWT)     │
+     │                      │<─────────────────────────│
+     │                      │                          │
+     │  5. Return streaming │                          │
+     │     ID + view token  │                          │
+     │<─────────────────────│                          │
+     │                      │                          │
+     │  6. Pass streamingId + viewToken to player      │
+     │     → player handles playback                   │
+```
+
+**Issue view token:**
+
+```
+POST https://market.gracia.ai/api/v1/streaming/view-token/issue
+X-API-KEY: <your_api_token>
+Content-Type: application/json
+
+{
+  "streamingIds": ["<streaming_id_from_gracia.ai>"],
+  "expireAt": "2026-03-12T14:30:00Z",
+  "domains": ["yoursite.com"]
+}
+```
+
+| Field | Required | Description |
+|---|---|---|
+| `streamingIds` | Yes | Content IDs this token can access |
+| `expireAt` | No | Token expiry (10–20 min recommended). Omit for long-lived |
+| `domains` | No | Restrict playback to these domains |
+
+**Revoke view token:**
+
+```
+POST https://market.gracia.ai/api/v1/streaming/view-token/revoke
+X-API-KEY: <your_api_token>
+Content-Type: application/json
+
+{
+  "tokenId": "token-id-here"
+}
+```
+
+### Token Reference
+
+| | API Token | View Token |
+|---|---|---|
+| **Purpose** | Identifies your app | Authorizes playback |
+| **Used by** | Your backend | Player / client |
+| **Header** | `X-API-KEY` | `X-View-Token` |
+| **Lifetime** | Long-lived | Minutes or indefinite |
+| **Created in** | Settings → Api Settings | Settings → Api Settings, or via API |
+
+### Streaming API Endpoints
+
+| Endpoint | Method | Auth | Description |
+|---|---|---|---|
+| `/api/v1/streaming/view-token/issue` | POST | API Token | Create a view token |
+| `/api/v1/streaming/view-token/revoke` | POST | API Token | Revoke a view token |
+| `/api/v1/streaming/view-token/update` | POST | API Token | Update a view token |
 
 ## License
 

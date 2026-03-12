@@ -1,20 +1,20 @@
 {
-  "name": "gracia-web-sdk",
-  "version": "0.0.39",
-  "description": "Gracia Vega — volumetric video SDK (player, app, Three.js, XR R3F, React hooks)",
+  "name": "@gracia/web-sdk",
+  "version": "0.0.41",
+  "description": "Gracia — volumetric video SDK (player, app, Three.js, XR R3F, React hooks)",
   "type": "module",
   "exports": {
     ".": {
-      "types": "./dist/VegaSDK.d.ts",
-      "default": "./dist/VegaSDK.js"
+      "types": "./dist/GraciaSDK.d.ts",
+      "default": "./dist/GraciaSDK.js"
     },
     "./wasm": {
-      "types": "./dist/Vega.d.ts",
-      "default": "./dist/Vega.js"
+      "types": "./dist/GraciaWebCore.d.ts",
+      "default": "./dist/GraciaWebCore.js"
     }
   },
-  "main": "./dist/VegaSDK.js",
-  "types": "./dist/VegaSDK.d.ts",
+  "main": "./dist/GraciaSDK.js",
+  "types": "./dist/GraciaSDK.d.ts",
   "scripts": {
     "serve": "bun scripts/serve.mjs"
   },
@@ -55,7 +55,7 @@
   },
   "keywords": [
     "webgpu",
-    "vega",
+    "gracia",
     "volumetric",
     "video",
     "gaussian-splatting",
