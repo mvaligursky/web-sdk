@@ -313,6 +313,21 @@ declare class SceneManipulator {
 
 type EnvPresetName = EnvPresetName$1;
 
+declare class GraciaSplats {
+    static create(Module: any, app: any, camera: any): Promise<GraciaSplats>;
+    constructor(player: any, app: any, camera: any);
+    enableMesh: boolean;
+    get player(): any;
+    set camera(c: any);
+    get camera(): any;
+    setAudio(url: any): Promise<void>;
+    set entity(e: null);
+    get entity(): null;
+    dispose(): void;
+    renderFrame(): void;
+    #private;
+}
+
 type GraciaMode = "pw" | "hw" | "vr" | "ar";
 interface GraciaSource {
     url: string;
@@ -674,4 +689,4 @@ declare class XROverlay {
     #private;
 }
 
-export { ClassicControls, DebugOverlay, ENV_PRESETS, EnvLighting, type EnvPresetName, GraciaApp, type GraciaCamera, type GraciaEventLogger, type GraciaMode, type GraciaPlayback, GraciaPlayer, type GraciaPlayerState, type GraciaPlaylist, type GraciaSource, type GraciaXR, ModernControls, QuadLayer, SceneManipulator, SplatsMesh, type StreamingItem, type UseGraciaPlayerOptions, XROverlay, buildApiSources, fetchStreamingMetadata, presetToLightProbe, useGraciaPlayer, useGraciaPlaylist };
+export { ClassicControls, DebugOverlay, ENV_PRESETS, EnvLighting, type EnvPresetName, GraciaApp, type GraciaCamera, type GraciaEventLogger, type GraciaMode, type GraciaPlayback, GraciaPlayer, type GraciaPlayerState, type GraciaPlaylist, type GraciaSource, GraciaSplats, type GraciaXR, ModernControls, QuadLayer, SceneManipulator, SplatsMesh, type StreamingItem, type UseGraciaPlayerOptions, XROverlay, buildApiSources, fetchStreamingMetadata, presetToLightProbe, useGraciaPlayer, useGraciaPlaylist };

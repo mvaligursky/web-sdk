@@ -2,14 +2,14 @@
 
 Volumetric video player for the web. Lifelike 3D content in the browser — flat screen, VR, or AR — with a single JavaScript import.
 
-**Live demos:** [Player](https://vega.gracia.ai/) · [React](https://vega.gracia.ai/react.html) · [Three.js](https://vega.gracia.ai/three.html)
+**Live demos:** [Player](https://vega.gracia.ai/) · [React](https://vega.gracia.ai/react.html) · [Three.js](https://vega.gracia.ai/three.html) · [PlayCanvas](https://vega.gracia.ai/playcanvas.html)
 
 ## Highlights
 
 - **WebGPU + WASM** — hardware-accelerated volumetric playback at scale
 - **Cross-platform** — 2D, VR, and AR from one SDK; optimized for Meta Quest 3/3S, Pico 4 Ultra, Apple Vision Pro
 - **Adaptive streaming** — seek, buffer, and switch scenes seamlessly
-- **Developer-first** — React hooks, Three.js mesh, vanilla JS — pick your stack
+- **Developer-first** — React hooks, Three.js mesh, PlayCanvas, vanilla JS — pick your stack
 - **XR built-in** — hand tracking, grab-to-move, spatial audio, environment relighting
 - **Modular** — zero required deps; tree-shake what you don't need
 
@@ -28,6 +28,7 @@ Volumetric video player for the web. Lifelike 3D content in the browser — flat
 ```bash
 npm install github:gracia-labs/web-sdk              # core SDK
 npm install github:gracia-labs/web-sdk three        # + Three.js
+npm install github:gracia-labs/web-sdk playcanvas   # + PlayCanvas (beta)
 npm install github:gracia-labs/web-sdk react gl-matrix  # + React hooks & standalone app
 ```
 
@@ -42,6 +43,7 @@ All peer dependencies are optional — install only what your integration needs:
 | Peer dependency | Required for |
 |-----------------|-------------|
 | `three` | `SplatsMesh`, `XROverlay`, XR controls |
+| `playcanvas` | `GraciaSplats` *(beta)* |
 | `react` | `useGraciaPlayer`, `useGraciaPlaylist` hooks |
 | `gl-matrix` | `GraciaApp` standalone 2D+XR player |
 | `@react-three/fiber` | XR UI panels (R3F-based) |
@@ -51,118 +53,16 @@ All peer dependencies are optional — install only what your integration needs:
 
 ## Quick Start
 
-### Vanilla JS — GraciaApp
+Each demo below is a self-contained HTML file — view the source for a complete, working example.
 
-Full-featured player with built-in camera, XR support and playback controls:
+| Integration | Demo | Source | Description |
+|-------------|------|--------|-------------|
+| **Vanilla JS** — `GraciaApp` | [Player](https://vega.gracia.ai/) | [`index.html`](index.html) | Full-featured player with camera, XR, playback controls |
+| **React** — Hooks | [React](https://vega.gracia.ai/react.html) | [`react.html`](react.html) | Declarative integration with `useGraciaPlayer` and `useGraciaPlaylist` |
+| **Three.js** — `SplatsMesh` | [Three.js](https://vega.gracia.ai/three.html) | [`three.html`](three.html) | Splats as a standard Three.js mesh with environment relighting |
+| **PlayCanvas** — `GraciaSplats` *(beta)* | [PlayCanvas](https://vega.gracia.ai/playcanvas.html) | [`playcanvas.html`](playcanvas.html) | Splats with depth testing and automatic shadow casting |
 
-```html
-<div id="canvasWrap" style="position:fixed;inset:0"></div>
-
-<script type="importmap">
-{ "imports": {
-    "@gracia/web-sdk/wasm": "./dist/GraciaWebCore.js",
-    "@gracia/web-sdk": "./dist/GraciaAIO.js"
-} }
-</script>
-
-<script type="module">
-import { buildApiSources, GraciaApp, XROverlay, THREE } from '@gracia/web-sdk';
-import ModuleFactory from '@gracia/web-sdk/wasm';
-
-let overlay;
-try { overlay = new XROverlay(THREE); } catch {}
-
-const app = await GraciaApp.create(
-    opts => ModuleFactory({ ...opts }),
-    { container: document.getElementById('canvasWrap'), overlay, mode: 'pw' }
-);
-
-// Callbacks: app.onProgress, app.onReady, app.onModeChange, app.onSceneChange
-
-const data = await (await fetch('/api/sources')).json();
-app.sources = await buildApiSources(data.items, data.baseUrl);
-app.start();
-app.loadScene(0);
-
-await app.setMode('vr');   // enter VR
-await app.setMode('pw');   // back to 2D
-app.supports('ar');        // check support
-</script>
-```
-
-### React — Hooks
-
-Declarative integration with `useGraciaPlayer` and `useGraciaPlaylist`:
-
-```jsx
-import { useRef, useEffect } from 'react';
-import { useGraciaPlayer, useGraciaPlaylist, buildApiSources } from '@gracia/web-sdk';
-
-function Player() {
-    const containerRef = useRef(null);
-    const gracia = useGraciaPlayer({ containerRef, moduleUrl: '/dist/GraciaWebCore.js' });
-    const playlist = useGraciaPlaylist(gracia);
-    const { playback, xr } = gracia;
-
-    useEffect(() => {
-        if (!gracia.isInitialized) return;
-        fetch('/api/sources').then(r => r.json()).then(async data => {
-            playlist.setSources(await buildApiSources(data.items, data.baseUrl));
-        });
-    }, [gracia.isInitialized]);
-
-    return (
-        <div style={{ position: 'relative', height: '100%' }}>
-            <div ref={containerRef} style={{ position: 'absolute', inset: 0 }} />
-            <button onClick={() => playback.togglePlay()}>
-                {playback.isBuffering ? '...' : playback.isPlaying ? 'Pause' : 'Play'}
-            </button>
-            <button onClick={() => playback.toggleMute()}>{playback.isMuted ? 'Unmute' : 'Mute'}</button>
-            <input type="range" min={0} max={playback.duration} value={playback.currentTime}
-                onChange={e => playback.seek(+e.target.value)} />
-
-            {/* xr.setMode('pw' | 'vr' | 'ar'), xr.vrSupported, xr.arSupported */}
-            <button disabled={!xr.vrSupported}
-                onClick={() => xr.setMode(gracia.mode === 'vr' ? 'pw' : 'vr')}>
-                {gracia.mode === 'vr' ? 'Exit VR' : 'VR'}
-            </button>
-
-            <button disabled={!playlist.hasPrev} onClick={() => playlist.prev()}>Prev</button>
-            <span>{playlist.index + 1}/{playlist.total} {playlist.currentSource?.label}</span>
-            <button disabled={!playlist.hasNext} onClick={() => playlist.next()}>Next</button>
-        </div>
-    );
-}
-```
-
-### Three.js — SplatsMesh
-
-Volumetric playback as a standard Three.js mesh:
-
-```js
-import { SplatsMesh, EnvLighting, THREE } from '@gracia/web-sdk';
-import ModuleFactory from '@gracia/web-sdk/wasm';
-
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.05, 200);
-
-const splats = await SplatsMesh.create(opts => ModuleFactory({ ...opts }), renderer);
-splats.enableMesh = true;
-scene.add(splats);
-
-splats.position.set(0, -0.7, 0.9);   // position like any Three.js object
-splats.scale.setScalar(0.5);
-
-splats.player.open({ url: 'https://api.example.com/stream/id/', token: 'your-token' });
-splats.player.play();
-
-// Relight splats to match your scene
-const env = new EnvLighting(probe.sh.toArray()).prepare(lightDir);
-splats.player.setEnvLighting(env, 1.0);
-
-(function animate() { requestAnimationFrame(animate); renderer.render(scene, camera); })();
-```
+> **PlayCanvas beta:** The PlayCanvas integration is functional but still maturing. Environment relighting and HDR skybox support are not yet available. The API may change in future releases.
 
 ## Cross-Origin Isolation
 
@@ -270,6 +170,7 @@ If `false`, check both headers are present (`DevTools → Network → Headers`) 
 | `GraciaPlayer` | Core player — play, pause, seek, render |
 | `GraciaApp` | High-level standalone player with camera, XR, mode switching |
 | `SplatsMesh` | Three.js `Mesh` subclass for scene graph integration |
+| `GraciaSplats` | PlayCanvas integration — splats with depth testing and shadow casting *(beta)* |
 
 ### React Hooks
 
