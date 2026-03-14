@@ -5,6 +5,26 @@ import * as three from 'three';
 import { Mesh, BufferGeometry } from 'three';
 import * as _preact_signals_core from '@preact/signals-core';
 
+declare class GraciaAudio {
+    static create(): GraciaAudio;
+    constructor(ctx: any);
+    ctx: AudioContext;
+    el: HTMLAudioElement & {
+        crossOrigin: string;
+        loop: boolean;
+        preload: string;
+        src: string;
+    };
+    rate: number;
+    get ready(): boolean;
+    load(url: string): Promise<void>;
+    sync(vt: number): void;
+    pause(): void;
+    reset(): void;
+    dispose(): void;
+    #private;
+}
+
 declare class EnvLighting {
     constructor(coefs?: ArrayLike<number>);
     coefficients: Float32Array;
@@ -14,17 +34,6 @@ declare class EnvLighting {
         z: number;
     }, contrast?: number, band2Scale?: number): this;
     normalize(contrast?: number): this;
-}
-
-declare class SyncedAudio {
-    el: HTMLAudioElement | null;
-    rate: number;
-    load(url: string): Promise<void>;
-    get ready(): boolean;
-    sync(vt: number): void;
-    pause(): void;
-    dispose(): void;
-    #private;
 }
 
 declare class GraciaPlayer {
@@ -55,7 +64,9 @@ declare class GraciaPlayer {
     setSpeed(s: number): void;
     close(): void;
     open(src: object): Promise<number> | undefined;
-    get audio(): SyncedAudio | null;
+    get audio(): GraciaAudio | null;
+    get audioContext(): AudioContext | null;
+    attachAudioContext(ctx: any): void;
     loadAudio(url: string): Promise<void>;
     syncAudio(): void;
     pauseAudio(): void;
