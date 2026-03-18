@@ -2,7 +2,7 @@
 
 Volumetric video player for the web. Lifelike 3D content in the browser — flat screen, VR, or AR — with a single JavaScript import.
 
-**Live demos:** [Player](https://vega.gracia.ai/) · [React](https://vega.gracia.ai/react.html) · [Three.js](https://vega.gracia.ai/three.html) · [PlayCanvas](https://vega.gracia.ai/playcanvas.html)
+**Live demos:** [Player](https://demo.gracia.ai/) · [React](https://demo.gracia.ai/react.html) · [Three.js](https://demo.gracia.ai/three.html) · [PlayCanvas](https://demo.gracia.ai/playcanvas.html)
 
 ## Highlights
 
@@ -57,10 +57,10 @@ Each demo below is a self-contained HTML file — view the source for a complete
 
 | Integration | Demo | Source | Description |
 |-------------|------|--------|-------------|
-| **Vanilla JS** — `GraciaApp` | [Player](https://vega.gracia.ai/) | [`index.html`](index.html) | Full-featured player with camera, XR, playback controls |
-| **React** — Hooks | [React](https://vega.gracia.ai/react.html) | [`react.html`](react.html) | Declarative integration with `useGraciaPlayer` and `useGraciaPlaylist` |
-| **Three.js** — `SplatsMesh` | [Three.js](https://vega.gracia.ai/three.html) | [`three.html`](three.html) | Splats as a standard Three.js mesh with environment relighting |
-| **PlayCanvas** — `GraciaSplats` *(beta)* | [PlayCanvas](https://vega.gracia.ai/playcanvas.html) | [`playcanvas.html`](playcanvas.html) | Splats with depth testing and automatic shadow casting |
+| **Vanilla JS** — `GraciaApp` | [Player](https://demo.gracia.ai/) | [`index.html`](index.html) | Full-featured player with camera, XR, playback controls |
+| **React** — Hooks | [React](https://demo.gracia.ai/react.html) | [`react.html`](react.html) | Declarative integration with `useGraciaPlayer` and `useGraciaPlaylist` |
+| **Three.js** — `SplatsMesh` | [Three.js](https://demo.gracia.ai/three.html) | [`three.html`](three.html) | Splats as a standard Three.js mesh with environment relighting |
+| **PlayCanvas** — `GraciaSplats` *(beta)* | [PlayCanvas](https://demo.gracia.ai/playcanvas.html) | [`playcanvas.html`](playcanvas.html) | Splats with depth testing and automatic shadow casting |
 
 > **PlayCanvas beta:** The PlayCanvas integration is functional but still maturing. Environment relighting and HDR skybox support are not yet available. The API may change in future releases.
 
