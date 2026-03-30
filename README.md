@@ -28,7 +28,7 @@ Volumetric video player for the web. Lifelike 3D content in the browser — flat
 ```bash
 npm install github:gracia-labs/web-sdk              # core SDK
 npm install github:gracia-labs/web-sdk three        # + Three.js
-npm install github:gracia-labs/web-sdk playcanvas   # + PlayCanvas (beta)
+npm install github:gracia-labs/web-sdk playcanvas   # + PlayCanvas
 npm install github:gracia-labs/web-sdk react gl-matrix  # + React hooks & standalone app
 ```
 
@@ -43,7 +43,7 @@ All peer dependencies are optional — install only what your integration needs:
 | Peer dependency | Required for |
 |-----------------|-------------|
 | `three` | `SplatsMesh`, `XROverlay`, XR controls |
-| `playcanvas` | `GraciaSplats` *(beta)* |
+| `playcanvas` | `GraciaSplats` |
 | `react` | `useGraciaPlayer`, `useGraciaPlaylist` hooks |
 | `gl-matrix` | `GraciaApp` standalone 2D+XR player |
 | `@react-three/fiber` | XR UI panels (R3F-based) |
@@ -60,9 +60,7 @@ Each demo below is a self-contained HTML file — view the source for a complete
 | **Vanilla JS** — `GraciaApp` | [Player](https://demo.gracia.ai/) | [`index.html`](index.html) | Full-featured player with camera, XR, playback controls |
 | **React** — Hooks | [React](https://demo.gracia.ai/react.html) | [`react.html`](react.html) | Declarative integration with `useGraciaPlayer` and `useGraciaPlaylist` |
 | **Three.js** — `SplatsMesh` | [Three.js](https://demo.gracia.ai/three.html) | [`three.html`](three.html) | Splats as a standard Three.js mesh with environment relighting |
-| **PlayCanvas** — `GraciaSplats` *(beta)* | [PlayCanvas](https://demo.gracia.ai/playcanvas.html) | [`playcanvas.html`](playcanvas.html) | Splats with depth testing and automatic shadow casting |
-
-> **PlayCanvas beta:** The PlayCanvas integration is functional but still maturing. Environment relighting and HDR skybox support are not yet available. The API may change in future releases.
+| **PlayCanvas** — `GraciaSplats` | [PlayCanvas](https://demo.gracia.ai/playcanvas.html) | [`playcanvas.html`](playcanvas.html) | Splats with depth testing and automatic shadow casting |
 
 ## Cross-Origin Isolation
 
@@ -170,7 +168,7 @@ If `false`, check both headers are present (`DevTools → Network → Headers`) 
 | `GraciaPlayer` | Core player — play, pause, seek, render |
 | `GraciaApp` | High-level standalone player with camera, XR, mode switching |
 | `SplatsMesh` | Three.js `Mesh` subclass for scene graph integration |
-| `GraciaSplats` | PlayCanvas integration — splats with depth testing and shadow casting *(beta)* |
+| `GraciaSplats` | PlayCanvas integration — splats with depth testing and shadow casting |
 
 ### React Hooks
 
@@ -277,6 +275,10 @@ When persisting issued tokens, store at least `userId` and `tokenId`, so your ba
 - Specification file: [`api-streaming-view-token.openapi.yaml`](./api-streaming-view-token.openapi.yaml)
 - To view it in Swagger Editor, open [Swagger Editor](https://editor.swagger.io/) and load this YAML file (or paste the API content directly).
 - You can also use any other Swagger/OpenAPI-compatible editors or viewers supporting the current version of the Specification.
+
+## Acknowledgements
+
+Thanks to [Martin Valigursky](https://github.com/mvaligursky) for help with the PlayCanvas integration.
 
 ## License
 
