@@ -7,6 +7,7 @@
     <script type="importmap">
     { "imports": {
         "playcanvas": "https://cdn.jsdelivr.net/npm/playcanvas@2.17.0/build/playcanvas.mjs",
+        "shadow-catcher": "https://cdn.jsdelivr.net/npm/playcanvas@2.17.0/scripts/esm/shadow-catcher.mjs",
         "@gracia/web-sdk": "./dist/GraciaAIO.js?v=__BUILD_HASH__",
         "@gracia/web-sdk/wasm": "./dist/GraciaWebCore.js?v=__BUILD_HASH__"
     } }
@@ -95,6 +96,10 @@
     /* bottom-right reset */
     .bot-right { position: fixed; bottom: 16px; right: 16px; z-index: 11; pointer-events: auto; }
 
+    /* attribution */
+    .ph-credit { position: fixed; bottom: 6px; left: 10px; z-index: 11; font: 400 9px/1 inherit; color: rgba(255,255,255,.2); text-decoration: none; pointer-events: auto; transition: color .15s; }
+    .ph-credit:hover { color: rgba(255,255,255,.5); }
+
     @media (max-width: 720px) {
         .ov { padding: 10px; }
         .top { gap: 8px; flex-wrap: wrap; }
@@ -112,12 +117,21 @@
     <div class="ov">
         <div class="top">
             <div class="panel">
+                <span class="lbl">Scene</span>
+                <div class="divider"></div>
                 <div class="dropdown" id="srcDD">
                     <button type="button" class="dd-toggle" id="srcToggle">Source&hellip;</button>
                     <div class="dd-menu" id="srcMenu"></div>
                 </div>
             </div>
-            <div class="spacer"></div>
+            <div class="panel">
+                <span class="lbl">Environment</span>
+                <div class="divider"></div>
+                <div class="dropdown" id="skyDD">
+                    <button type="button" class="dd-toggle" id="skyToggle">Sky&hellip;</button>
+                    <div class="dd-menu" id="skyMenu"></div>
+                </div>
+            </div>
             <div class="spacer"></div>
         </div>
         <div class="bot">
@@ -127,10 +141,12 @@
     <div class="bot-right">
         <div class="panel"><button type="button" class="btn" id="resetCam">Reset</button></div>
     </div>
+    <a class="ph-credit" href="https://polyhaven.com" target="_blank" rel="noopener">HDRI assets by Poly Haven</a>
 
     <script type="module">
     import * as pc from 'playcanvas';
-    import { buildApiSources, GraciaSplats } from '@gracia/web-sdk';
+    import { ShadowCatcher } from 'shadow-catcher';
+    import { buildApiSources, EnvLighting, GraciaSplats } from '@gracia/web-sdk';
     import ModuleFactory from '@gracia/web-sdk/wasm';
 
     const $ = id => document.getElementById(id);
@@ -152,12 +168,13 @@
     app.scene.toneMapping = pc.TONEMAP_ACES;
     app.scene.gammaCorrection = pc.GAMMA_SRGB;
     app.scene.clusteredLightingEnabled = false;
-    app.scene.ambientLight = new pc.Color(0.22, 0.21, 0.20);
-    app.scene.fog.type = pc.FOG_EXP2;
-    app.scene.fog.color = new pc.Color(0.38, 0.36, 0.33);
-    app.scene.fog.density = 0.04;
-    app.scene.exposure = 0.65;
     app.start();
+
+    // Move Skybox before World so splats render correctly
+    const layers = app.scene.layers;
+    const skyboxLayer = layers.getLayerByName('Skybox');
+    layers.remove(skyboxLayer);
+    layers.insert(skyboxLayer, 0);
 
     window.addEventListener('resize', () => app.resizeCanvas());
 
@@ -167,175 +184,312 @@
     camera.addComponent('camera', {
         clearColor: new pc.Color(0.32, 0.30, 0.28),
         fov: 50,
-        nearClip: 0.05,
-        farClip: 200,
+        nearClip: 1,
+        farClip: 500,
     });
     app.root.addChild(camera);
 
-    const CAM_DEFAULTS = { azimuth: Math.PI * 0.8, elevation: 0.35, distance: 2.8, target: [0, 0.3, 0] };
-    let azimuth = CAM_DEFAULTS.azimuth;
-    let elevation = CAM_DEFAULTS.elevation;
-    let orbitDist = CAM_DEFAULTS.distance;
+    const CAM_DEFAULTS = { azimuth: Math.PI * 0.8, elevation: 0.35, distance: 39, target: [0, 6, 0] };
+    const SMOOTH = 12;
+    let tAzimuth = CAM_DEFAULTS.azimuth,   azimuth = tAzimuth;
+    let tElevation = CAM_DEFAULTS.elevation, elevation = tElevation;
+    let tOrbitDist = CAM_DEFAULTS.distance,  orbitDist = tOrbitDist;
     const orbitTarget = new pc.Vec3(...CAM_DEFAULTS.target);
     let orbiting = false;
 
     function updateOrbitCamera() {
-        const ce = Math.cos(elevation), se = Math.sin(elevation);
-        const ca = Math.cos(azimuth), sa = Math.sin(azimuth);
+        const ce = Math.cos(azimuth), se = Math.sin(azimuth);
+        const cEl = Math.cos(elevation), sEl = Math.sin(elevation);
         camera.setPosition(
-            orbitTarget.x + orbitDist * ce * sa,
-            orbitTarget.y + orbitDist * se,
-            orbitTarget.z + orbitDist * ce * ca,
+            orbitTarget.x + orbitDist * cEl * se,
+            orbitTarget.y + orbitDist * sEl,
+            orbitTarget.z + orbitDist * cEl * ce,
         );
         camera.lookAt(orbitTarget);
     }
     updateOrbitCamera();
+
+    function smoothCamera(dt) {
+        const t = 1 - Math.exp(-SMOOTH * dt);
+        azimuth   += (tAzimuth - azimuth) * t;
+        elevation += (tElevation - elevation) * t;
+        orbitDist += (tOrbitDist - orbitDist) * t;
+        updateOrbitCamera();
+    }
 
     canvas.addEventListener('pointerdown', e => {
         if (e.button === 0) { orbiting = true; canvas.setPointerCapture(e.pointerId); }
     });
     canvas.addEventListener('pointermove', e => {
         if (!orbiting) return;
-        azimuth -= e.movementX * 0.005;
-        elevation = clamp(elevation + e.movementY * 0.005, -Math.PI * 0.45, Math.PI * 0.45);
-        updateOrbitCamera();
+        tAzimuth -= e.movementX * 0.005;
+        tElevation = clamp(tElevation + e.movementY * 0.005, -Math.PI * 0.45, Math.PI * 0.45);
     });
     canvas.addEventListener('pointerup', () => { orbiting = false; });
     canvas.addEventListener('pointercancel', () => { orbiting = false; });
     canvas.addEventListener('wheel', e => {
-        orbitDist = clamp(orbitDist + e.deltaY * 0.003, 0.5, 20);
-        updateOrbitCamera();
+        tOrbitDist = clamp(tOrbitDist + e.deltaY * 0.06, 10, 400);
     }, { passive: true });
 
     $('resetCam').onclick = () => {
-        azimuth = CAM_DEFAULTS.azimuth;
-        elevation = CAM_DEFAULTS.elevation;
-        orbitDist = CAM_DEFAULTS.distance;
+        tAzimuth = CAM_DEFAULTS.azimuth;
+        tElevation = CAM_DEFAULTS.elevation;
+        tOrbitDist = CAM_DEFAULTS.distance;
         orbitTarget.set(...CAM_DEFAULTS.target);
-        updateOrbitCamera();
     };
 
-    /* ── Lights (3-point cinematic) ── */
+    /* ── Lights ── */
 
     const keyLight = new pc.Entity('keyLight');
     keyLight.addComponent('light', {
         type: 'directional',
         color: new pc.Color(1, 0.92, 0.78),
-        intensity: 2.4,
+        intensity: 1,
         castShadows: true,
+        shadowIntensity: 0.5,
         shadowResolution: 2048,
-        shadowType: pc.SHADOW_PCF5,
+        shadowType: pc.SHADOW_PCF5_16F,
         shadowBias: 0.05,
         normalOffsetBias: 0.05,
-        shadowDistance: 10,
+        shadowDistance: 200,
     });
-    keyLight.setEulerAngles(50, 35, 0);
+    const KEY_LIGHT_DEFAULT_ANGLES = [50, 35, 0];
+    keyLight.setEulerAngles(...KEY_LIGHT_DEFAULT_ANGLES);
     app.root.addChild(keyLight);
-
-    const fillLight = new pc.Entity('fillLight');
-    fillLight.addComponent('light', {
-        type: 'directional',
-        color: new pc.Color(0.55, 0.62, 0.82),
-        intensity: 0.5,
-        castShadows: false,
-    });
-    fillLight.setEulerAngles(25, -130, 0);
-    app.root.addChild(fillLight);
-
-    const rimLight = new pc.Entity('rimLight');
-    rimLight.addComponent('light', {
-        type: 'directional',
-        color: new pc.Color(1, 0.85, 0.6),
-        intensity: 0.9,
-        castShadows: false,
-    });
-    rimLight.setEulerAngles(15, -170, 0);
-    app.root.addChild(rimLight);
 
     /* ── Materials helper ── */
 
-    function mat(color, gloss, metalness, opts) {
+    function mat(color, gloss, metalness) {
         const m = new pc.StandardMaterial();
         m.diffuse = new pc.Color(...color);
         m.gloss = gloss;
         m.metalness = metalness;
-        if (opts?.emissive) { m.emissive = new pc.Color(...opts.emissive); m.emissiveIntensity = opts.emissiveIntensity ?? 1; }
-        if (opts?.opacity != null) { m.opacity = opts.opacity; m.blendType = pc.BLEND_NORMAL; }
+        m.useMetalness = true;
         m.update();
         return m;
     }
 
-    function addObj(type, pos, scale, material, euler, shadows = true) {
-        const e = new pc.Entity(type);
-        e.addComponent('render', { type, castShadows: shadows, receiveShadows: true });
+    function setupEntity(e, pos, scale, material, euler, shadows) {
         e.setLocalPosition(...pos);
-        if (Array.isArray(scale)) e.setLocalScale(...scale); else e.setLocalScale(scale, scale, scale);
+        e.setLocalScale(...scale);
         if (euler) e.setLocalEulerAngles(...euler);
         e.render.meshInstances[0].material = material;
         app.root.addChild(e);
         return e;
     }
 
-    /* ── Floor ── */
-
-    const floorMat = mat([0.48, 0.45, 0.42], 0.55, 0.02);
-    addObj('plane', [0, 0, 0], [12, 1, 12], floorMat, null, false);
-
-    /* ── Pedestal (two-tier) ── */
-
-    const pedestalMat = mat([0.75, 0.72, 0.68], 0.88, 0.04);
-    addObj('cylinder', [0, 0.015, 0], [0.78, 0.03, 0.78], pedestalMat);
-    addObj('cylinder', [0, 0.04, 0],  [0.62, 0.02, 0.62], mat([0.82, 0.80, 0.76], 0.92, 0.06));
-
-    /* ── Reference spheres ── */
-
-    addObj('sphere', [0.55, 0.10, 0.35], 0.16, mat([1, 1, 1], 0.98, 1.0));
-    addObj('sphere', [-0.55, 0.10, 0.35], 0.16, mat([0.92, 0.90, 0.88], 0.0, 0.0));
-
-    /* ── Copper torus knot ── */
-
-    const knotMat = mat([0.85, 0.45, 0.22], 0.72, 0.55);
-    const knot = addObj('torus', [0.45, 0.14, -0.45], 0.18, knotMat);
-
-    /* ── Dark wood box ── */
-
-    addObj('box', [-0.42, 0.08, -0.42], 0.16, mat([0.28, 0.18, 0.12], 0.35, 0.02), [0, 25, 0]);
-
-    /* ── Stone cone (obelisk) ── */
-
-    addObj('cone', [0, 0.12, -0.7], [0.10, 0.24, 0.10], mat([0.6, 0.58, 0.54], 0.20, 0.0));
-
-    /* ── Brass capsule ── */
-
-    addObj('capsule', [0.62, 0.13, -0.18], [0.07, 0.22, 0.07], mat([0.78, 0.65, 0.30], 0.80, 0.7), [0, 0, 12]);
-
-    /* ── Back-wall columns ── */
-
-    const colMat = mat([0.52, 0.50, 0.47], 0.30, 0.0);
-    for (const x of [-1.8, 1.8]) {
-        addObj('cylinder', [x, 0.75, -2.0], [0.12, 1.5, 0.12], colMat);
-        addObj('cylinder', [x, 1.52, -2.0], [0.18, 0.04, 0.18], colMat);
+    function addObj(type, pos, scale, material, euler, shadows = true) {
+        const e = new pc.Entity(type);
+        e.addComponent('render', { type, castShadows: shadows, receiveShadows: true });
+        return setupEntity(e, pos, scale, material, euler, shadows);
     }
 
-    /* ── Back wall slab ── */
+    function addCylinder(pos, scale, material, euler, shadows = true) {
+        const mesh = pc.createCylinder(app.graphicsDevice, { capSegments: 64 });
+        const e = new pc.Entity('cylinder');
+        e.addComponent('render', { type: 'asset', castShadows: shadows, receiveShadows: true });
+        e.render.meshInstances = [new pc.MeshInstance(mesh, material)];
+        return setupEntity(e, pos, scale, material, euler, shadows);
+    }
 
-    addObj('box', [0, 0.9, -2.2], [4.2, 1.8, 0.08], mat([0.42, 0.40, 0.38], 0.15, 0.0), null, false);
+    /* ── Pedestal (three-tier) ── */
 
-    /* ── Small accent objects ── */
+    const pedestalMat = mat([0.75, 0.72, 0.68], 0.8, 0.2);
+    const pedestal1 = addCylinder([0, -0.7, 0], [23.4, 0.6, 23.4], pedestalMat);
+    const pedestal2 = addCylinder([0, -0.2, 0], [18.6, 0.4, 18.6], pedestalMat);
+    const pedestal3 = addCylinder([0, -1.1, 0], [30.4, 0.2, 30.4], pedestalMat);
+    pedestal1.enabled = false;
+    pedestal2.enabled = false;
+    pedestal3.enabled = false;
 
-    addObj('sphere', [-0.25, 0.04, 0.55], 0.06, mat([0.90, 0.25, 0.18], 0.60, 0.1));
-    addObj('box', [0.28, 0.025, 0.6], [0.12, 0.05, 0.08], mat([0.20, 0.22, 0.30], 0.45, 0.3), [0, -15, 0]);
-    addObj('cylinder', [-0.60, 0.06, -0.15], [0.05, 0.12, 0.05], mat([0.65, 0.60, 0.50], 0.50, 0.0));
+    /* ── Shadow catcher (used when projected skydomes are active) ── */
 
-    /* ── Animations ── */
+    const shadowCatcherEntity = new pc.Entity('ShadowCatcher');
+    shadowCatcherEntity.addComponent('script').create(ShadowCatcher, {
+        properties: {
+            scale: new pc.Vec3(100, 100, 100)
+        }
+    });
+    shadowCatcherEntity.setLocalPosition(0, 0, 0);
+    shadowCatcherEntity.enabled = false;
+    app.root.addChild(shadowCatcherEntity);
+
+    /* ── Frame Update ── */
 
     app.on('update', dt => {
-        knot.rotateLocal(dt * 20, dt * 12, 0);
+        smoothCamera(dt);
     });
+
+    /* ── Sky presets ────────────────────────────────── */
+
+    const SKY_PRESETS = {
+        'None':         { url: null, sh: null, lightDir: null },
+        'Street Dome': {
+            url: 'https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/2k/wide_street_02_2k.hdr',
+            type: pc.SKYTYPE_DOME,
+            scale: [200, 200, 200],
+            tripodY: 0.05,
+            exposure: 0.7,
+            rotation: 0,
+            projected: true,
+            keyLightAngles: [-50, 140, 0],
+            sh: [1.87031,1.918464,2.000223,0.962367,1.050086,1.184771,1.543599,1.419717,1.262293,2.100156,1.935595,1.729669,1.584412,1.473231,1.336372,1.148921,1.068716,0.966966,-0.07552,-0.038685,-0.013138,2.609779,2.423938,2.198205,1.474358,1.355914,1.198138],
+            lightDir: { x: 0.3, y: 1, z: 0.2 },
+        },
+        'Sunset': {
+            url: 'https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/2k/industrial_sunset_puresky_2k.hdr',
+            type: pc.SKYTYPE_INFINITE,
+            scale: [200, 200, 200],
+            tripodY: 0.05,
+            exposure: 0.3,
+            rotation: 90,
+            sh: [2.198001,2.532174,3.182135,0.65039,0.790722,1.05029,0.5967,0.263902,-0.023595,0.780168,0.406654,0.068925,0.184931,0.112526,0.031816,0.153647,0.082786,0.016223,-0.012991,0.051354,0.091854,0.57614,0.450866,0.394832,0.667496,0.585546,0.532165],
+            lightDir: { x: 1, y: 0.2, z: 0 },
+        },
+        'Rosendal Sunset': {
+            url: 'https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/2k/rosendal_park_sunset_puresky_2k.hdr',
+            type: pc.SKYTYPE_INFINITE,
+            exposure: 0.3,
+            rotation: 0,
+            sh: [5.571507,4.571519,6.150409,0.383537,0.586309,1.092522,3.727947,2.327521,2.435435,5.006741,3.159468,3.324151,0.182788,0.23739,0.400604,0.158049,0.195062,0.321512,1.015175,0.722526,0.78891,4.37705,2.286575,1.999851,4.63148,2.827274,2.790029],
+            lightDir: { x: 0.5, y: 0.3, z: 0 },
+        },
+        'Night': {
+            url: 'https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/2k/solitude_night_2k.hdr',
+            type: pc.SKYTYPE_DOME,
+            scale: [200, 200, 200],
+            tripodY: 0.05,
+            exposure: 0.5,
+            rotation: 0,
+            projected: true,
+            sh: [1.166094,0.622424,0.450999,0.352207,0.252218,0.308721,-0.058531,-0.046016,-0.127867,0.988865,0.407128,0.100454,0.281666,0.084706,-0.046188,-0.107987,-0.11409,-0.218669,0.110075,0.108467,0.133476,0.46739,0.387593,0.355134,0.922706,0.373184,0.100967],
+            lightDir: { x: 0.2, y: 0.8, z: 0.1 },
+        },
+        'Sunrise': {
+            url: 'https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/2k/stierberg_sunrise_2k.hdr',
+            type: pc.SKYTYPE_DOME,
+            scale: [200, 200, 200],
+            tripodY: 0.05,
+            exposure: 0.5,
+            rotation: -80,
+            projected: true,
+            sh: [3.16565,3.163558,2.879746,-0.135058,0.047817,0.193577,1.849482,1.56818,0.683283,2.599934,2.261639,1.066521,0.32349,0.336824,0.240732,0.226919,0.219155,0.128605,0.115556,0.097011,0.054528,3.451919,3.049305,1.537143,2.690141,2.407626,1.361757],
+            lightDir: { x: 0.2, y: 0.8, z: 0.1 },
+        },
+    };
+
+    const hdriCache = new Map();
+
+    function getOrGenerateHdri(url, texture) {
+        if (hdriCache.has(url)) return hdriCache.get(url);
+        const skybox = pc.EnvLighting.generateSkyboxCubemap(texture);
+        const lighting = pc.EnvLighting.generateLightingSource(texture);
+        const envAtlas = pc.EnvLighting.generateAtlas(lighting);
+        lighting.destroy();
+        const entry = { skybox, envAtlas };
+        hdriCache.set(url, entry);
+        return entry;
+    }
+
+    function applyHdri(url, texture) {
+        const { skybox, envAtlas } = getOrGenerateHdri(url, texture);
+        app.scene.skybox = skybox;
+        app.scene.envAtlas = envAtlas;
+    }
+
+    let currentSH = null, currentLightDir = null;
+    let relightScale = 1.0, relightAmbBoost = 1.0;
+
+    function applyRelight(sh, lightDir) {
+        currentSH = sh;
+        currentLightDir = lightDir;
+        if (!splats) return;
+        if (!sh) { splats.player.clearEnvLighting(); return; }
+        const env = new EnvLighting(sh).prepare(lightDir);
+        if (relightAmbBoost > 0) {
+            env.coefficients[0] += relightAmbBoost;
+            env.coefficients[1] += relightAmbBoost;
+            env.coefficients[2] += relightAmbBoost;
+        }
+        splats.player.setEnvLighting(env, relightScale);
+    }
+
+    function applySkySettings(preset) {
+        const useProjected = !!preset.projected;
+        pedestal1.enabled = !useProjected;
+        pedestal2.enabled = !useProjected;
+        pedestal3.enabled = !useProjected;
+        shadowCatcherEntity.enabled = useProjected;
+
+        keyLight.setEulerAngles(...(preset.keyLightAngles ?? KEY_LIGHT_DEFAULT_ANGLES));
+
+        app.scene.skyboxRotation = new pc.Quat().setFromEulerAngles(0, preset.rotation ?? 0, 0);
+        app.scene.exposure = preset.exposure ?? 1;
+        app.scene.sky.center = new pc.Vec3(0, preset.tripodY ?? 0, 0);
+        app.scene.sky.node.setLocalScale(new pc.Vec3(preset.scale ?? [1, 1, 1]));
+
+        applyRelight(preset.sh, preset.lightDir);
+    }
+
+    function applySkyPreset(preset) {
+        if (!preset.url) {
+            pedestal1.enabled = true;
+            pedestal2.enabled = true;
+            pedestal3.enabled = true;
+            shadowCatcherEntity.enabled = false;
+            keyLight.setEulerAngles(...KEY_LIGHT_DEFAULT_ANGLES);
+            app.scene.skybox = null;
+            app.scene.envAtlas = null;
+            app.scene.exposure = 0.65;
+            applyRelight(null);
+            return;
+        }
+
+        if (hdriCache.has(preset.url)) {
+            applySkySettings(preset);
+            app.scene.sky.type = preset.type ?? pc.SKYTYPE_INFINITE;
+            applyHdri(preset.url, null);
+            return;
+        }
+
+        const asset = new pc.Asset('hdri', 'texture', { url: preset.url }, { mipmaps: false });
+        asset.on('load', () => {
+            applySkySettings(preset);
+            app.scene.sky.type = preset.type ?? pc.SKYTYPE_INFINITE;
+            applyHdri(preset.url, asset.resource);
+        });
+        app.assets.add(asset);
+        app.assets.load(asset);
+    }
+
+    function initSkyDropdown() {
+        const dd = $('skyDD'), tog = $('skyToggle'), menu = $('skyMenu');
+        for (const name of Object.keys(SKY_PRESETS)) {
+            Object.assign(mk('button', 'dd-item', menu), { textContent: name }).dataset.sky = name;
+        }
+        tog.onclick = () => dd.classList.toggle('open');
+        document.addEventListener('click', e => { if (!dd.contains(e.target)) dd.classList.remove('open'); });
+        menu.onclick = e => {
+            const item = e.target.closest('.dd-item'); if (!item) return;
+            dd.classList.remove('open');
+            const name = item.dataset.sky;
+            tog.textContent = name;
+            for (const i of menu.querySelectorAll('.dd-item')) i.classList.toggle('active', i.dataset.sky === name);
+            applySkyPreset(SKY_PRESETS[name]);
+        };
+    }
 
     /* ── Gracia splats ─────────────────────────────── */
 
-    const SPLAT_DEFAULTS = { pos: [0, -0.7, 0.9], scl: 0.5 };
+    const SPLAT_SCALE = 10;
+    const SPLAT_POS = {
+        'Fashion': [0, 12, 0],
+        'Cycling': [0, 11.2, 0],
+        'Doctor':  [0, 10.8, 0],
+        'Singer':  [0, 11.9, 0],
+        'Juggler': [0, 10.3, 0],
+    };
+    const SPLAT_POS_DEFAULT = [0, -14, 18];
     let splats = null;
 
     async function initGracia() {
@@ -400,36 +554,42 @@
         for (const s of sources) Object.assign(mk('button', 'dd-item', $('srcMenu')), { textContent: s.label }).dataset.src = s.id;
     }
 
-    function openSource(src) {
+    function openSource(src, noAutoPlay = false) {
         if (!splats) return;
         const p = splats.player; p.close();
         const e = splats.entity;
+        const pos = SPLAT_POS[src.label] ?? SPLAT_POS_DEFAULT;
 
         const tf = src.initialTransform;
+        const yaw180 = new pc.Quat().setFromEulerAngles(0, 180, 0);
         if (tf) {
-            if (tf.rotation) e.setLocalRotation(tf.rotation.x, tf.rotation.y, tf.rotation.z, tf.rotation.w);
-            else e.setLocalRotation(0, 0, 0, 1);
+            const baseRot = tf.rotation
+                ? new pc.Quat(tf.rotation.x, tf.rotation.y, tf.rotation.z, tf.rotation.w)
+                : new pc.Quat(0, 0, 0, 1);
+            e.setLocalRotation(new pc.Quat().copy(yaw180).mul(baseRot));
             if (tf.translation) e.setLocalPosition(
-                tf.translation.x + SPLAT_DEFAULTS.pos[0],
-                tf.translation.y + SPLAT_DEFAULTS.pos[1],
-                tf.translation.z + SPLAT_DEFAULTS.pos[2],
+                tf.translation.x + pos[0],
+                tf.translation.y + pos[1],
+                tf.translation.z + pos[2],
             );
-            else e.setLocalPosition(...SPLAT_DEFAULTS.pos);
+            else e.setLocalPosition(...pos);
             if (tf.scale) e.setLocalScale(
-                tf.scale.x * SPLAT_DEFAULTS.scl,
-                tf.scale.y * SPLAT_DEFAULTS.scl,
-                tf.scale.z * SPLAT_DEFAULTS.scl,
+                tf.scale.x * SPLAT_SCALE,
+                tf.scale.y * SPLAT_SCALE,
+                tf.scale.z * SPLAT_SCALE,
             );
-            else e.setLocalScale(SPLAT_DEFAULTS.scl, SPLAT_DEFAULTS.scl, SPLAT_DEFAULTS.scl);
+            else e.setLocalScale(SPLAT_SCALE, SPLAT_SCALE, SPLAT_SCALE);
         } else {
             e.setLocalPosition(0, 0, 0);
-            e.setLocalRotation(0, 0, 0, 1);
+            e.setLocalRotation(yaw180);
             e.setLocalScale(1, 1, 1);
         }
 
         p.open(src);
-        p.play();
-        if (src.audio) splats.setAudio(src.audio);
+        if (!noAutoPlay) {
+            p.play();
+            if (src.audio) splats.setAudio(src.audio);
+        }
     }
 
     function initDropdown() {
@@ -492,8 +652,29 @@
     (async () => {
         try {
             await loadSources(); initDropdown();
+            initSkyDropdown();
             tickBar = mountBar($('barWrap'));
             await initGracia();
+
+            const defaultSky = 'Street Dome';
+            $('skyToggle').textContent = defaultSky;
+            for (const i of $('skyMenu').querySelectorAll('.dd-item')) i.classList.toggle('active', i.dataset.sky === defaultSky);
+            applySkyPreset(SKY_PRESETS[defaultSky]);
+
+            const defaultSrc = sources.find(s => s.label === 'Fashion');
+            if (defaultSrc) {
+                $('srcToggle').textContent = defaultSrc.label;
+                for (const i of $('srcMenu').querySelectorAll('.dd-item')) i.classList.toggle('active', i.dataset.src === defaultSrc.id);
+                openSource(defaultSrc, true);
+
+                // Browser requires a user gesture before audio/video can play.
+                // Start playback and attach audio on the first interaction.
+                document.addEventListener('pointerdown', () => {
+                    const p = splats.player;
+                    if (!p.isPlaying) p.play();
+                    if (defaultSrc.audio) splats.setAudio(defaultSrc.audio);
+                }, { once: true });
+            }
         } catch (e) { console.error(e); }
     })();
     </script>
